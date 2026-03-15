@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porsche Intelligence Platform v7.0.0</title>
+    <style>
+        :root {
+            --porsche-red: #d5001c; --porsche-gold: #b2967d;
+            --bg-dark: #0a0a0a; --panel-dark: #1c1c1c; --text-light: #e0e0e0;
+        }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-dark); color: var(--text-light); margin: 0; padding: 0; }
+        
+        /* Navigation (Persistent) */
+        nav { background: #000; padding: 15px 30px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--porsche-red); position: sticky; top: 0; z-index: 1000; }
+        .nav-logo { color: white; font-weight: bold; letter-spacing: 4px; font-size: 1.2rem; cursor: pointer; }
+        .nav-links { display: flex; gap: 20px; }
+        nav a { color: #888; text-decoration: none; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; }
+        nav a.active { color: #fff; border-bottom: 2px solid var(--porsche-red); padding-bottom: 5px; }
+
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px 120px 20px; }
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+
+        .card { background: var(--panel-dark); border-radius: 12px; padding: 25px; border: 1px solid #333; margin-bottom: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+        
+        /* Failure & Archive Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .item-card { background: #222; border: 1px solid #444; border-radius: 10px; overflow: hidden; cursor: pointer; transition: 0.3s; position: relative; }
+        .item-card:hover { border-color: var(--porsche-red); transform: translateY(-5px); }
+        .item-body { padding: 20px; }
+        .item-body h3 { margin: 0 0 10px; color: var(--porsche-gold); font-size: 1.1rem; }
+        .item-body p { font-size: 0.85rem; color: #aaa; margin: 0; }
+
+        /* Detail Overlay (Ensuring Back functionality) */
+        #detail-view { display: none; background: #1a1a1a; border: 2px solid var(--porsche-gold); border-radius: 15px; padding: 30px; margin-top: 20px; animation: slideIn 0.4s ease; }
+        .back-btn { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
+        .back-btn:hover { background: var(--porsche-red); }
+
+        /* Tables */
+        .data-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9rem; }
+        .data-table th { text-align: left; color: var(--porsche-gold); padding: 10px; border-bottom: 1px solid #555; background: #111; }
+        .data-table td { padding: 10px; border-bottom: 1px solid #333; }
+
+        /* Input Bar */
+        .input-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #000; padding: 20px; border-top: 1px solid #333; z-index: 1000; }
+        .input-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 12px; }
+        input[type="text"] { flex: 1; background: #111; border: 1px solid #555; color: #fff; padding: 14px; border-radius: 6px; outline: none; }
+        .ai-btn { background: var(--porsche-red); color: white; border: none; padding: 0 30px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-logo" onclick="goHome()">PORSCHE INTELLIGENCE</div>
+    <div class="nav-links">
+        <a id="nav-diag" class="active" onclick="showPage('diag')">DIAGNOSTIC / 診断</a>
+        <a id="nav-arch" onclick="showPage('arch')">UNIVERSAL ARCHIVE / 全知</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div id="page-diag" class="page active">
+        <div class="card">
+            <h2 style="font-weight:300; letter-spacing:2px;">車両診断：駆動方式 ＆ 世代別リスト</h2>
+            <div class="grid" id="diag-grid">
+                <div class="item-card" onclick="loadFailures('RR')"><h3>RR Series</h3><p>356, 912, 911...</p></div>
+                <div class="item-card" onclick="loadFailures('FR')"><h3>FR Series</h3><p>924, 944, 968, 928...</p></div>
+                <div class="item-card" onclick="loadFailures('Special')"><h3>Special Models</h3><p>959, Carrera GT, 918...</p></div>
+            </div>
+            
+            <div id="failure-sub-list" style="display:none; margin-top:30px;">
+                <button class="back-btn" onclick="goHome()">← 駆動方式選択に戻る</button>
+                <div class="grid" id="failure-items"></div>
+            </div>
+
+            <div id="diag-detail" style="display:none; margin-top:30px;">
+                <button class="back-btn" onclick="backToFailures()">← 故障リストに戻る</button>
+                <div id="diag-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-arch" class="page">
+        <div class="card">
+            <h2 style="font-weight:300; letter-spacing:2px;">UNIVERSAL KNOWLEDGE ARCHIVE</h2>
+            <div class="grid" id="arch-grid">
+                <div class="item-card" onclick="openArch('rubber')"><h3>■ ゴム部品：NBR vs Viton</h3><p>設計意図と物理的解決</p></div>
+                <div class="item-card" onclick="openArch('glass')"><h3>■ ガラス：Securitの歴史</h3><p>刻印と透過率の変遷</p></div>
+                <div class="item-card" onclick="openArch('interior')"><h3>■ 内装：スイッチとメーター</h3><p>クリック感と指示精度の復元</p></div>
+            </div>
+            <div id="arch-detail" style="display:none; margin-top:30px;">
+                <button class="back-btn" onclick="closeArch()">← アーカイブ一覧に戻る</button>
+                <div id="arch-content"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="input-bar">
+    <div class="input-inner">
+        <input type="text" id="user-input" placeholder="AIに相談（例：944のダッシュボード亀裂の補修部品と工数）">
+        <button class="ai-btn" onclick="aiConsult()">AI解析</button>
+    </div>
+</div>
+
+<script>
+    const db = {
+        'rubber': `<h3>純正NBR(ニトリル)の意図 ＆ 現代のViton(FKM)による解決</h3>
+                   <div class="card" style="background:#111;">
+                                        <p><b>設計意図：</b>1980年代当時、NBRは冷間時の馴染み性が高く、初期密閉性に優れるため標準採用されました。</p>
+                    <p><b>現代の解決：</b>Vitonは耐熱限界が230℃と高く、NBRの弱点である「酸化による硬化」を物理的に克服します。一生モノのレストアには必須の選択肢です。</p>
+                   </div>`,
+        '964_leak': `<h3>【場合分け診断】シリンダー・スルーボルトのオイル漏れ</h3>
+                     <table class="data-table">
+                        <tr><th>プラン</th><th>原因と対策</th><th>部品・費用・工期</th></tr>
+                        <tr><td>A：軽度</td><td>タペットカバー増し締め ＆ 洗浄</td><td>¥5,000 / 1h (DIY可)</td></tr>
+                        <tr><td>B：重度</td><td>スルーボルトOリング交換(Viton)</td><td>部品:¥18,500 / 工賃:¥160,000 / 18h / SST必須</td></tr>
+                     </table>
+                     <p><b>必要工具(SST)：</b>クランクケース保持治具(P201相当)、12pt特殊ソケット</p>`
+    };
+
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + id).classList.add('active');
+        document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+        document.getElementById('nav-' + id.substring(0,4)).classList.add('active');
+    }
+
+    function loadFailures(era) {
+        document.getElementById('diag-grid').style.display = 'none';
+        document.getElementById('failure-sub-list').style.display = 'block';
+        const container = document.getElementById('failure-items');
+        container.innerHTML = `<div class="item-card" onclick="showDiag('964_leak')"><h3>■ オイル漏れ（貫通ボルト）</h3><p>詳細：純正/社外比較・工期・工数</p></div>`;
+    }
+
+    function showDiag(id) {
+        document.getElementById('failure-sub-list').style.display = 'none';
+        document.getElementById('diag-detail').style.display = 'block';
+        document.getElementById('diag-content').innerHTML = db[id] || "データを構築中...";
+    }
+
+    function backToFailures() {
+        document.getElementById('diag-detail').style.display = 'none';
+        document.getElementById('failure-sub-list').style.display = 'block';
+    }
+
+    function openArch(id) {
+        document.getElementById('arch-grid').style.display = 'none';
+        document.getElementById('arch-detail').style.display = 'block';
+        document.getElementById('arch-content').innerHTML = db[id] || "詳細データを構築中...";
+    }
+
+    function closeArch() {
+        document.getElementById('arch-detail').style.display = 'none';
+        document.getElementById('arch-grid').style.display = 'grid';
+    }
+
+    function goHome() { location.reload(); }
+    function aiConsult() { alert("AI解析：ご入力内容に基づき、世界中の修理記録から最適パーツと工期を算出中..."); showDiag('964_leak'); }
+</script>
+
+</body>
+</html>
